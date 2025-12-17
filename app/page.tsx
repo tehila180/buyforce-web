@@ -1,65 +1,160 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { FormEvent, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/api';
+import { isLoggedIn } from '@/lib/auth';
+
+export default function RegisterPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoggedIn()) {
+      router.replace('/dashboard');
+    }
+  }, [router]);
+
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (password !== passwordConfirm) {
+      setError('הסיסמאות אינן תואמות');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const res = await apiFetch('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ email, username, password }),
+      });
+
+      // ⬅ שמירת הטוקן כמו בלוגין
+      localStorage.setItem('token', res.token);
+
+      setSuccess('נרשמת בהצלחה!');
+
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 500);
+
+    } catch (err: any) {
+      setError(err.message || 'שגיאה בהרשמה');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#f5f5f5',
+        padding: '1rem',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 400,
+          background: '#fff',
+          borderRadius: 12,
+          padding: '2rem',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+        }}
+      >
+        <h1 style={{ marginBottom: '1rem', textAlign: 'center' }}>Register</h1>
+        <p style={{ marginBottom: '1.5rem', textAlign: 'center', color: '#666' }}>
+          יצירת משתמש חדש ל-BuyForce
+        </p>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span>שם משתמש</span>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              style={{ padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid #ddd' }}
+              required
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </label>
+
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span>אימייל</span>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={{ padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid #ddd' }}
+              required
+            />
+          </label>
+
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span>סיסמה</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{ padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid #ddd' }}
+              required
+            />
+          </label>
+
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span>אימות סיסמה</span>
+            <input
+              type="password"
+              value={passwordConfirm}
+              onChange={(e) => setPasswordConfirm(e.target.value)}
+              style={{ padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid #ddd' }}
+              required
+            />
+          </label>
+
+          {error && <div style={{ color: '#b00020', fontSize: 14 }}>{error}</div>}
+          {success && <div style={{ color: 'green', fontSize: 14 }}>{success}</div>}
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              marginTop: '1rem',
+              padding: '0.75rem',
+              borderRadius: 999,
+              border: 'none',
+              background: loading ? '#999' : '#4f46e5',
+              color: '#fff',
+              fontWeight: 600,
+              cursor: loading ? 'default' : 'pointer',
+            }}
           >
-            Documentation
-          </a>
+            {loading ? 'נרשם...' : 'הרשמה'}
+          </button>
+
+        </form>
+
+        <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: 14 }}>
+          כבר רשום? <a href="/login" style={{ color: '#4f46e5' }}>התחברות</a>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

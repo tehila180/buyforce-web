@@ -9,8 +9,8 @@ export default function PayPage() {
   const router = useRouter();
 
   return (
-    <div>
-      <h2>תשלום</h2>
+    <div style={{ padding: 24 }}>
+      <h1>💳 תשלום</h1>
 
       <PayPalButtons
         createOrder={async () => {
@@ -21,7 +21,6 @@ export default function PayPage() {
 
           return res.id; // PayPal orderId
         }}
-
         onApprove={async (data) => {
           await apiFetch(`/payments/paypal/capture?token=${data.orderID}`);
           router.push('/payment/success');

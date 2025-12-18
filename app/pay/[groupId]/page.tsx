@@ -1,66 +1,35 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
 import { PayPalButtons } from '@paypal/react-paypal-js';
 import { apiFetch } from '@/lib/api';
+import { useRouter } from 'next/navigation';
 
-export default function PayPage() {
-  const { groupId } = useParams<{ groupId: string }>();
+export default function PayPage({ params }: any) {
   const router = useRouter();
-  const [group, setGroup] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      const token = localStorage.getItem('token');
-      if (!token) return router.push('/login');
-
-      const data = await apiFetch(`/groups/${groupId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setGroup(data);
-      setLoading(false);
-    })();
-  }, [groupId, router]);
-
-  if (loading) return <p style={{ padding: 24 }}>טוען תשלום...</p>;
-  if (!group) return <p style={{ padding: 24 }}>קבוצה לא נמצאה</p>;
+  const groupId = Number(params.groupId);
 
   return (
-    <div style={{ padding: 24, maxWidth: 420, margin: '0 auto' }}>
+    <div style={{ maxWidth: 420, margin: '0 auto', padding: 24 }}>
       <h1>💳 תשלום קבוצתי</h1>
 
-      <p><strong>מוצר:</strong> {group.product.name}</p>
-      <p><strong>מחיר לתשלום:</strong> ₪{(group.product.priceGroup / 100).toFixed(2)}</p>
-      <p>חברים בקבוצה: {group.members.length} / {group.target}</p>
+      <PayPalButtons
+        createOrder={async () => {
+          const res = await apiFetch('/payments/paypal/create', {
+            method: 'POST',
+            body: JSON.stringify({ groupId }),
+          });
 
-      <div style={{ marginTop: 16 }}>
-        <PayPalButtons
-          style={{ layout: 'vertical' }}
-          createOrder={async () => {
-            const token = localStorage.getItem('token');
-            const res = await apiFetch('/payments/paypal/create', {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ groupId: Number(groupId) }),
-            });
-            return res.id; // חייב להיות orderId
-          }}
-          onApprove={async (data) => {
-            const token = localStorage.getItem('token');
-            await apiFetch(`/payments/paypal/capture?token=${data.orderID}`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            router.push('/payment/success');
-          }}
-          onError={(err) => {
-            console.error(err);
-            alert('שגיאה ב-PayPal');
-          }}
-        />
-      </div>
+          return res.id; // PayPal Order ID
+        }}
+        onApprove={async (data) => {
+          await apiFetch('/payments/paypal/capture', {
+            method: 'POST',
+            body: JSON.stringify({ orderId: data.orderID }),
+          });
+
+          router.push('/payment/success');
+        }}
+      />
     </div>
   );
 }

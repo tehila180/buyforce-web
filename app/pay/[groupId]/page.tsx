@@ -13,23 +13,19 @@ export default function PayPage({ params }: any) {
       <h1>💳 תשלום קבוצתי</h1>
 
       <PayPalButtons
-        createOrder={async () => {
-          const res = await apiFetch('/payments/paypal/create', {
-            method: 'POST',
-            body: JSON.stringify({ groupId }),
-          });
+  createOrder={async () => {
+    const res = await apiFetch('/payments/paypal/create', {
+      method: 'POST',
+      body: JSON.stringify({ groupId: Number(groupId) }),
+    });
+    return res.id;
+  }}
+  onApprove={async (data) => {
+    await apiFetch(`/payments/paypal/capture?token=${data.orderID}`);
+    router.push('/payment/success');
+  }}
+/>
 
-          return res.id; // PayPal Order ID
-        }}
-        onApprove={async (data) => {
-          await apiFetch('/payments/paypal/capture', {
-            method: 'POST',
-            body: JSON.stringify({ orderId: data.orderID }),
-          });
-
-          router.push('/payment/success');
-        }}
-      />
     </div>
   );
 }

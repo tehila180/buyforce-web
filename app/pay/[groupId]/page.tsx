@@ -1,15 +1,15 @@
 'use client';
 
 import { PayPalButtons } from '@paypal/react-paypal-js';
-import { useRouter, useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
+import { useRouter, useParams } from 'next/navigation';
 
 export default function PayPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const router = useRouter();
 
   return (
-    <div style={{ maxWidth: 400, margin: '0 auto' }}>
+    <div>
       <h2>תשלום</h2>
 
       <PayPalButtons
@@ -21,12 +21,9 @@ export default function PayPage() {
 
           return res.id; // PayPal orderId
         }}
-        onApprove={async (data) => {
-          await apiFetch('/payments/paypal/capture', {
-            method: 'POST',
-            body: JSON.stringify({ orderId: data.orderID }),
-          });
 
+        onApprove={async (data) => {
+          await apiFetch(`/payments/paypal/capture?token=${data.orderID}`);
           router.push('/payment/success');
         }}
       />

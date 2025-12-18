@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import "./globals.css";
 import Header from "@/components/Header";
 
@@ -16,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "BuyForce",
-  description: "Group Buying Platform",
+  description: "Group buying platform",
 };
 
 export default function RootLayout({
@@ -26,19 +25,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="he">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        style={{ margin: 0 }}
-      >
-        <PayPalScriptProvider
-          options={{
-            clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!,
-            currency: "ILS",
-          }}
-        >
-          <Header />
-          {children}
-        </PayPalScriptProvider>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <Header />
+        {children}
       </body>
     </html>
   );

@@ -19,7 +19,6 @@ export default function PayPage() {
       <PayPalButtons
         style={{ layout: 'vertical' }}
 
-        // 🔹 יצירת הזמנה – חובה intent כדי ש-TypeScript יעבור
         createOrder={(data, actions) => {
           return actions.order.create({
             intent: 'CAPTURE',
@@ -34,23 +33,26 @@ export default function PayPage() {
           });
         }}
 
-        // 🔹 נקרא רק אחרי תשלום אמיתי ב-PayPal
         onApprove={async (data, actions) => {
           if (!actions.order) return;
 
-          // PayPal מבצע capture אמיתי
-          const details = await actions.order.capture();
+          try {
+            // 1️⃣ Capture אמיתי מול PayPal
+            await actions.order.capture();
 
-          // עדכון ה-Backend (DB בלבד)
-          await apiFetch('/payments/paypal/confirm', {
-            method: 'POST',
-            body: JSON.stringify({
-              groupId: Number(groupId),
-              paypalOrderId: details.id,
-            }),
-          });
+            // 2️⃣ עדכון הבקן + DB
+            await apiFetch(
+              `/payments/paypal/capture?token=${data.orderID}`,
+              { method: 'POST' }
+            );
 
-          router.push('/payment/success');
+            // 3️⃣ ניווט רק אחרי הצלחה
+            router.push('/payment/success');
+          } catch (err) {
+            console.error('Payment failed:', err);
+            alert('❌ התשלום נכשל, נסי שוב');
+            router.push('/payment/fail');
+          }
         }}
 
         onError={(err) => {

@@ -1,48 +1,62 @@
 'use client';
 
-import { PayPalButtons } from '@paypal/react-paypal-js';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { useRouter } from 'next/navigation';
 
-export default function PayPage() {
-  const { groupId } = useParams<{ groupId: string }>();
+type GroupItem = {
+  group: {
+    id: number;
+    status: 'open' | 'completed' | 'paid';
+    target: number;
+    members: any[];
+    product: {
+      name: string;
+      priceGroup: number;
+    };
+  };
+  hasPaid: boolean;
+};
+
+export default function MyGroupsPage() {
   const router = useRouter();
+  const [groups, setGroups] = useState<GroupItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiFetch('/groups/my').then(setGroups).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <p>טוען...</p>;
 
   return (
-    <div style={{ padding: 24, maxWidth: 400, margin: '0 auto' }}>
-      <h1>💳 תשלום השתתפות</h1>
+    <div style={{ padding: 24 }}>
+      <h1>האזור האישי שלי</h1>
 
-      <PayPalButtons
-        createOrder={(data, actions) =>
-          actions.order.create({
-            intent: 'CAPTURE',
-            purchase_units: [
-              {
-                amount: {
-                  currency_code: 'ILS',
-                  value: '1.00',
-                },
-              },
-            ],
-          })
-        }
-        onApprove={async (data, actions) => {
-          if (!actions.order) return;
+      {groups.map(({ group, hasPaid }) => (
+        <div key={group.id} style={{ border: '1px solid #ddd', padding: 16, marginBottom: 16 }}>
+          <h3>{group.product.name}</h3>
+          <p>👥 {group.members.length} / {group.target}</p>
 
-          await actions.order.capture();
+          {!hasPaid && group.status === 'completed' && (
+            <button onClick={() => router.push(`/pay/${group.id}`)}>
+              💳 המשך לתשלום
+            </button>
+          )}
 
-          await apiFetch('/payments/paypal/confirm', {
-            method: 'POST',
-            body: JSON.stringify({
-              groupId: Number(groupId),
-              paypalOrderId: data.orderID,
-            }),
-          });
+          {hasPaid && group.status !== 'paid' && (
+            <p style={{ color: 'green' }}>
+              ✅ שילמת כבר – ממתינים לשאר המשתתפים
+            </p>
+          )}
 
-          router.push('/payment/success');
-        }}
-        onError={() => router.push('/payment/fail')}
-      />
+          {group.status === 'paid' && (
+            <p style={{ color: 'green', fontWeight: 'bold' }}>
+              🎉 הקבוצה הושלמה – כולם שילמו
+            </p>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

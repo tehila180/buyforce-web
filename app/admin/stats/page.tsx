@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 
 // app/admin/stats/page.tsx
 'use client';

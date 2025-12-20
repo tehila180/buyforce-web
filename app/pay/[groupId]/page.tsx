@@ -26,22 +26,29 @@ export default function PayPage() {
             ],
           })
         }
+
         onApprove={async (data, actions) => {
           if (!actions.order) return;
 
-          await actions.order.capture();
+          // 1️⃣ Capture אמיתי מול PayPal
+          const details = await actions.order.capture();
 
+          // 2️⃣ עדכון ה-Backend (DB)
           await apiFetch('/payments/paypal/confirm', {
             method: 'POST',
             body: JSON.stringify({
               groupId: Number(groupId),
-              paypalOrderId: data.orderID,
+              paypalOrderId: details.id,
             }),
           });
 
+          // 3️⃣ ניווט לדף קיים בלבד
           router.push('/payment/success');
         }}
-        onError={() => router.push('/payment/fail')}
+
+        onError={() => {
+          router.push('/payment/fail');
+        }}
       />
     </div>
   );

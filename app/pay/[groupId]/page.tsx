@@ -10,11 +10,17 @@ export default function PayPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 400, margin: '0 auto' }}>
-      <h1>💳 תשלום השתתפות</h1>
+      <h1 style={{ marginBottom: 16 }}>💳 תשלום השתתפות</h1>
+
+      <p style={{ marginBottom: 24 }}>
+        דמי הצטרפות לקבוצה: <strong>₪1</strong>
+      </p>
 
       <PayPalButtons
-        createOrder={(data, actions) =>
-          actions.order.create({
+        style={{ layout: 'vertical' }}
+
+        createOrder={(data, actions) => {
+          return actions.order.create({
             intent: 'CAPTURE',
             purchase_units: [
               {
@@ -24,24 +30,35 @@ export default function PayPage() {
                 },
               },
             ],
-          })
-        }
+          });
+        }}
+
         onApprove={async (data, actions) => {
           if (!actions.order) return;
 
-          await actions.order.capture();
+          try {
+            // 1️⃣ Capture אמיתי מול PayPal
+            await actions.order.capture();
 
-          await apiFetch('/payments/paypal/confirm', {
-            method: 'POST',
-            body: JSON.stringify({
-              groupId: Number(groupId),
-              paypalOrderId: data.orderID,
-            }),
-          });
+            // 2️⃣ עדכון הבקן + DB
+            await apiFetch(
+              `/payments/paypal/capture?token=${data.orderID}`,
+              { method: 'POST' }
+            );
 
-          router.push('/payment/success');
+            // 3️⃣ ניווט רק אחרי הצלחה
+            router.push('/payment/success');
+          } catch (err) {
+            console.error('Payment failed:', err);
+            alert('❌ התשלום נכשל, נסי שוב');
+            router.push('/payment/fail');
+          }
         }}
-        onError={() => router.push('/payment/fail')}
+
+        onError={(err) => {
+          console.error('PayPal error:', err);
+          router.push('/payment/fail');
+        }}
       />
     </div>
   );

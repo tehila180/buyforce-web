@@ -8,6 +8,11 @@ export default function PayPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const router = useRouter();
 
+  const token =
+    typeof window !== 'undefined'
+      ? localStorage.getItem('token')
+      : null;
+
   return (
     <div style={{ padding: 24, maxWidth: 400, margin: '0 auto' }}>
       <h1>💳 תשלום השתתפות</h1>
@@ -29,19 +34,27 @@ export default function PayPage() {
         onApprove={async (data, actions) => {
           if (!actions.order) return;
 
-          await actions.order.capture();
+          try {
+            await actions.order.capture();
 
-          await apiFetch('/payments/paypal/confirm', {
-            method: 'POST',
-            body: JSON.stringify({
-              groupId: Number(groupId),
-              paypalOrderId: data.orderID,
-            }),
-          });
+            await apiFetch('/payments/paypal/confirm', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                groupId: Number(groupId),
+                paypalOrderId: data.orderID,
+              }),
+            });
 
-          router.push('/payment/success');
+            router.push('/payment/success');
+          } catch (err) {
+            console.error(err);
+            alert('❌ התשלום נכשל');
+            router.push('/payment/fail');
+          }
         }}
-        onError={() => router.push('/payment/fail')}
       />
     </div>
   );

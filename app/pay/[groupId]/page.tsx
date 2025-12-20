@@ -19,9 +19,10 @@ export default function PayPage() {
       <PayPalButtons
         style={{ layout: 'vertical' }}
 
-        // 🔹 יצירת הזמנה דרך ה-SDK (פותח חלון PayPal)
+        // 🔹 יצירת הזמנה – חובה intent כדי ש-TypeScript יעבור
         createOrder={(data, actions) => {
           return actions.order.create({
+            intent: 'CAPTURE',
             purchase_units: [
               {
                 amount: {
@@ -33,14 +34,14 @@ export default function PayPage() {
           });
         }}
 
-        // 🔹 מתבצע רק אחרי אישור תשלום אמיתי
+        // 🔹 נקרא רק אחרי תשלום אמיתי ב-PayPal
         onApprove={async (data, actions) => {
           if (!actions.order) return;
 
-          // ⬅️ כאן PayPal מבצע Capture אמיתי
+          // PayPal מבצע capture אמיתי
           const details = await actions.order.capture();
 
-          // ⬅️ עדכון השרת שלך בלבד (DB)
+          // עדכון ה-Backend (DB בלבד)
           await apiFetch('/payments/paypal/confirm', {
             method: 'POST',
             body: JSON.stringify({

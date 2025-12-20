@@ -198,7 +198,7 @@ export default function GroupPage() {
 
       {group.status === 'completed' && isMember && (
         <button
-          onClick={() => router.push(`/pay/${group.id}`)}
+          onClick={() => router.push(`/pay/[groupId]/${group.id}`)}
           style={{
             marginTop: 16,
             padding: '10px 18px',

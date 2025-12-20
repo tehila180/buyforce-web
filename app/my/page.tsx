@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import PaymentModal from '@/components/PaymentModal';
 
 type GroupMember = {
   group: {
@@ -25,15 +24,12 @@ export default function MyGroupsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [payingGroupId, setPayingGroupId] = useState<number | null>(null);
-  const [paying, setPaying] = useState(false);
-
   const token =
     typeof window !== 'undefined'
       ? localStorage.getItem('token')
       : null;
 
-  // ✅ טעינת כל הקבוצות שלי
+  // טעינת הקבוצות שלי
   async function loadGroups() {
     try {
       if (!token) {
@@ -58,28 +54,6 @@ export default function MyGroupsPage() {
   useEffect(() => {
     loadGroups();
   }, []);
-
-  // ✅ תשלום Mock
-  async function handlePay(groupId: number) {
-    try {
-      setPaying(true);
-
-      await apiFetch(`/groups/${groupId}/pay`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      alert('✅ התשלום בוצע בהצלחה!');
-      await loadGroups();
-    } catch (e: any) {
-      alert(e.message || 'שגיאה בתשלום');
-    } finally {
-      setPaying(false);
-      setPayingGroupId(null);
-    }
-  }
 
   if (loading) return <p style={{ padding: 24 }}>טוען קבוצות...</p>;
   if (error) return <p style={{ padding: 24, color: 'red' }}>{error}</p>;
@@ -137,14 +111,14 @@ export default function MyGroupsPage() {
               />
             </div>
 
-            {/* ✅ סטטוס */}
+            {/* סטטוס / פעולה */}
             {group.status === 'open' && (
               <p style={{ color: '#555' }}>⏳ ממתין לחברים נוספים</p>
             )}
 
             {group.status === 'completed' && (
               <button
-                onClick={() => setPayingGroupId(group.id)}
+                onClick={() => router.push(`/pay/${group.id}`)}
                 style={{
                   marginTop: 8,
                   padding: '8px 16px',
@@ -156,7 +130,7 @@ export default function MyGroupsPage() {
                   cursor: 'pointer',
                 }}
               >
-                💳 שלם ₪1 והצטרף לקבוצה
+                💳 המשך לתשלום
               </button>
             )}
 
@@ -168,14 +142,6 @@ export default function MyGroupsPage() {
           </div>
         );
       })}
-
-      {/* ✅ Modal תשלום */}
-      <PaymentModal
-        open={payingGroupId !== null}
-        loading={paying}
-        onClose={() => setPayingGroupId(null)}
-        onPay={() => handlePay(payingGroupId!)}
-      />
     </div>
   );
 }

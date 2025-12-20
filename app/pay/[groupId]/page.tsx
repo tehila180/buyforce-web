@@ -1,35 +1,62 @@
 'use client';
 
 import { PayPalButtons } from '@paypal/react-paypal-js';
+import { useParams, useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import { useRouter, useParams } from 'next/navigation';
 
 export default function PayPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const router = useRouter();
 
   return (
-    <div style={{ padding: 24 }}>
-      <h1>💳 תשלום</h1>
-<PayPalButtons
-  createOrder={async () => {
-    const res = await apiFetch('/payments/paypal/create', {
-      method: 'POST',
-      body: JSON.stringify({ groupId: Number(groupId) }),
-    });
+    <div style={{ padding: 24, maxWidth: 400, margin: '0 auto' }}>
+      <h1 style={{ marginBottom: 16 }}>💳 תשלום השתתפות</h1>
 
-    return res.orderId; // חובה
-  }}
+      <p style={{ marginBottom: 24 }}>
+        דמי הצטרפות לקבוצה: <strong>₪1</strong>
+      </p>
 
-  onApprove={async (data) => {
-    await apiFetch('/payments/paypal/capture', {
-      method: 'POST',
-      body: JSON.stringify({ orderId: data.orderID }),
-    });
+      <PayPalButtons
+        style={{ layout: 'vertical' }}
 
-    router.push('/payment/success');
-  }}
-/>
+        // 🔹 יצירת הזמנה דרך ה-SDK (פותח חלון PayPal)
+        createOrder={(data, actions) => {
+          return actions.order.create({
+            purchase_units: [
+              {
+                amount: {
+                  currency_code: 'ILS',
+                  value: '1.00',
+                },
+              },
+            ],
+          });
+        }}
+
+        // 🔹 מתבצע רק אחרי אישור תשלום אמיתי
+        onApprove={async (data, actions) => {
+          if (!actions.order) return;
+
+          // ⬅️ כאן PayPal מבצע Capture אמיתי
+          const details = await actions.order.capture();
+
+          // ⬅️ עדכון השרת שלך בלבד (DB)
+          await apiFetch('/payments/paypal/confirm', {
+            method: 'POST',
+            body: JSON.stringify({
+              groupId: Number(groupId),
+              paypalOrderId: details.id,
+            }),
+          });
+
+          router.push('/payment/success');
+        }}
+
+        onError={(err) => {
+          console.error('PayPal error:', err);
+          router.push('/payment/fail');
+        }}
+      />
     </div>
   );
 }

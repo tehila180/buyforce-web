@@ -1,5 +1,4 @@
 
-export const dynamic = 'force-dynamic';
 // app/admin/layout.tsx
 'use client';
 

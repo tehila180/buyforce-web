@@ -1,5 +1,5 @@
 export async function apiFetch(
-  path: string,
+   path: string,
   options: RequestInit = {},
 ) {
   const API_BASE = process.env.NEXT_PUBLIC_API_URL;
@@ -29,7 +29,4 @@ export async function apiFetch(
 
   if (!res.ok) {
     throw new Error(data?.message || 'הבקשה נכשלה');
-  }
-
-  return data;
-}
+  } }

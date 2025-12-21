@@ -4,23 +4,9 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
-type GroupItem = {
-  group: {
-    id: number;
-    status: 'open' | 'completed' | 'paid';
-    target: number;
-    members: any[];
-    product: {
-      name: string;
-      priceGroup: number;
-    };
-  };
-  hasPaid: boolean;
-};
-
 export default function MyGroupsPage() {
   const router = useRouter();
-  const [groups, setGroups] = useState<GroupItem[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,17 +22,8 @@ export default function MyGroupsPage() {
       <h1>האזור האישי שלי</h1>
 
       {groups.map(({ group, hasPaid }) => (
-        <div
-          key={group.id}
-          style={{
-            border: '1px solid #ddd',
-            padding: 16,
-            marginBottom: 16,
-            borderRadius: 8,
-          }}
-        >
+        <div key={group.id} style={{ border: '1px solid #ddd', padding: 16, marginBottom: 16 }}>
           <h3>{group.product.name}</h3>
-          <p>👥 {group.members.length} / {group.target}</p>
 
           {!hasPaid && group.status === 'completed' && (
             <button onClick={() => router.push(`/pay/${group.id}`)}>
@@ -56,13 +33,19 @@ export default function MyGroupsPage() {
 
           {hasPaid && group.status !== 'paid' && (
             <p style={{ color: 'green' }}>
-              ✅ שילמת כבר – ממתינים לשאר המשתתפים
+              ✅ שילמת – ממתינים לשאר המשתתפים
             </p>
           )}
 
           {group.status === 'paid' && (
             <p style={{ color: 'green', fontWeight: 'bold' }}>
-              🎉 הקבוצה הושלמה – כולם שילמו
+              🎉 כולם שילמו
+            </p>
+          )}
+
+          {group.status === 'cancelled' && (
+            <p style={{ color: 'red' }}>
+              💸 הקבוצה בוטלה – התשלום הוחזר
             </p>
           )}
         </div>

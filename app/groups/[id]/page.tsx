@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 
+/* ---------- Types ---------- */
+
 type Member = {
   user: {
     id: string;
@@ -31,18 +33,22 @@ type Group = {
   };
 };
 
-function getUserId() {
+/* ---------- Helpers ---------- */
+
+function getCurrentUserId() {
   if (typeof window === 'undefined') return null;
   const token = localStorage.getItem('token');
   if (!token) return null;
 
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.sub;
+    return payload.sub as string;
   } catch {
     return null;
   }
 }
+
+/* ---------- Page ---------- */
 
 export default function GroupPage() {
   const { id } = useParams<{ id: string }>();
@@ -51,7 +57,7 @@ export default function GroupPage() {
   const [group, setGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const currentUserId = getUserId();
+  const currentUserId = getCurrentUserId();
 
   useEffect(() => {
     apiFetch(`/groups/${id}`)
@@ -65,7 +71,7 @@ export default function GroupPage() {
   const paidUserIds = new Set(
     group.payments
       .filter(p => p.status === 'CAPTURED')
-      .map(p => p.userId)
+      .map(p => p.userId),
   );
 
   return (
@@ -86,12 +92,18 @@ export default function GroupPage() {
       {/* 👥 רשימת משתתפים */}
       <h3 style={{ marginTop: 20 }}>משתתפים</h3>
       <ul>
-        {group.members.map(m => (
-          <li key={m.user.id}>
-            {m.user.username || m.user.email} —{' '}
-            {paidUserIds.has(m.user.id) ? '✅ שילם' : '⏳ ממתין'}
-          </li>
-        ))}
+        {group.members.map(m => {
+          const isMe = m.user.id === currentUserId;
+          const hasPaid = paidUserIds.has(m.user.id);
+
+          return (
+            <li key={m.user.id}>
+              {m.user.username || m.user.email}
+              {isMe && <strong> (אני)</strong>} —{' '}
+              {hasPaid ? '✅ שילם' : '⏳ ממתין'}
+            </li>
+          );
+        })}
       </ul>
 
       {/* 💳 כפתורי פעולה */}

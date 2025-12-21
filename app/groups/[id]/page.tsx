@@ -4,10 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 
-// ---------- Types ----------
-
 type Member = {
-  id: number;
   user: {
     id: string;
     username: string;
@@ -15,38 +12,37 @@ type Member = {
   };
 };
 
+type Payment = {
+  userId: string;
+  status: string;
+};
+
 type Group = {
   id: number;
   status: 'open' | 'completed' | 'paid';
   target: number;
   members: Member[];
+  payments: Payment[];
+  hasPaid: boolean;
   product: {
-    id: number;
     name: string;
     priceRegular: number;
     priceGroup: number;
   };
 };
 
-// ---------- Helpers ----------
-
-function getToken() {
+function getUserId() {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('token');
-}
+  const token = localStorage.getItem('token');
+  if (!token) return null;
 
-function getCurrentUserId() {
   try {
-    const token = getToken();
-    if (!token) return null;
     const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.sub as string;
+    return payload.sub;
   } catch {
     return null;
   }
 }
-
-// ---------- Page ----------
 
 export default function GroupPage() {
   const { id } = useParams<{ id: string }>();
@@ -54,169 +50,69 @@ export default function GroupPage() {
 
   const [group, setGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const token = getToken();
-  const currentUserId = getCurrentUserId();
-
-  async function loadGroup() {
-    try {
-      setError(null);
-      setLoading(true);
-
-      if (!token) {
-        setError('כדי לצפות בדף הקבוצה עליך להתחבר למערכת.');
-        setGroup(null);
-        return;
-      }
-
-      const data = await apiFetch(`/groups/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      setGroup(data);
-    } catch (err: any) {
-      setError(err.message || 'שגיאה בטעינת הקבוצה');
-      setGroup(null);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const currentUserId = getUserId();
 
   useEffect(() => {
-    if (id) loadGroup();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    apiFetch(`/groups/${id}`)
+      .then(setGroup)
+      .finally(() => setLoading(false));
   }, [id]);
 
-  const isMember = group
-    ? group.members.some((m) => m.user.id === currentUserId)
-    : false;
+  if (loading) return <p style={{ padding: 24 }}>טוען קבוצה…</p>;
+  if (!group) return <p style={{ padding: 24 }}>קבוצה לא נמצאה</p>;
 
-  async function handleJoin() {
-    if (!group) return;
-
-    if (!token) {
-      alert('כדי להצטרף לקבוצה עליך להתחבר או להירשם.');
-      return;
-    }
-
-    if (isMember) {
-      alert('את כבר מצטרפת לקבוצה הזו 🙂');
-      return;
-    }
-
-    try {
-      await apiFetch(`/groups/${group.id}/join`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      alert('הצטרפת לקבוצה!');
-      await loadGroup();
-    } catch (err: any) {
-      alert(err.message || 'שגיאה בהצטרפות לקבוצה');
-    }
-  }
-
-  // ---------- Render ----------
-
-  if (loading) return <p style={{ padding: 24 }}>טוען קבוצה...</p>;
-
-  if (error) {
-    return (
-      <div style={{ padding: 24 }}>
-        <p style={{ color: 'red', marginBottom: 16 }}>{error}</p>
-        {!token && (
-          <button onClick={() => router.push('/login')}>
-            התחברות
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  if (!group) return <p style={{ padding: 24 }}>הקבוצה לא נמצאה</p>;
-
-  const percent = Math.min(
-    100,
-    Math.round((group.members.length / group.target) * 100),
+  const paidUserIds = new Set(
+    group.payments
+      .filter(p => p.status === 'CAPTURED')
+      .map(p => p.userId)
   );
 
   return (
     <div style={{ padding: 24, maxWidth: 600, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 24, marginBottom: 8 }}>
-        קבוצה למוצר: {group.product.name}
-      </h1>
+      <h1>{group.product.name}</h1>
 
       <p>
         מחיר קבוצתי: <strong>₪{group.product.priceGroup}</strong>
       </p>
-      <p>
-        מחיר רגיל:{' '}
-        <span style={{ textDecoration: 'line-through' }}>
-          ₪{group.product.priceRegular}
-        </span>
+      <p style={{ textDecoration: 'line-through', color: '#888' }}>
+        ₪{group.product.priceRegular}
       </p>
 
-      <div style={{ margin: '16px 0' }}>
-        👥 חברים: {group.members.length} / {group.target}
-        <div
-          style={{
-            background: '#eee',
-            height: 10,
-            borderRadius: 999,
-            overflow: 'hidden',
-            marginTop: 8,
-          }}
-        >
-          <div
-            style={{
-              width: `${percent}%`,
-              height: '100%',
-              background: '#4f46e5',
-            }}
-          />
-        </div>
-      </div>
+      <p>
+        👥 {group.members.length} / {group.target}
+      </p>
 
-      {/* כפתורי פעולה */}
-      {group.status === 'open' && (
-        isMember ? (
-          <p style={{ color: 'green' }}>
-            ✅ את כבר בקבוצה. מחכים לעוד חברים…
-          </p>
-        ) : (
-          <button onClick={handleJoin}>
-            הצטרפות לקבוצה
-          </button>
-        )
-      )}
+      {/* 👥 רשימת משתתפים */}
+      <h3 style={{ marginTop: 20 }}>משתתפים</h3>
+      <ul>
+        {group.members.map(m => (
+          <li key={m.user.id}>
+            {m.user.username || m.user.email} —{' '}
+            {paidUserIds.has(m.user.id) ? '✅ שילם' : '⏳ ממתין'}
+          </li>
+        ))}
+      </ul>
 
-      {group.status === 'completed' && isMember && (
+      {/* 💳 כפתורי פעולה */}
+      {group.status === 'completed' && !group.hasPaid && (
         <button
           onClick={() => router.push(`/pay/${group.id}`)}
-          style={{
-            marginTop: 16,
-            padding: '10px 18px',
-            borderRadius: 999,
-            border: 'none',
-            background: '#16a34a',
-            color: '#fff',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
+          style={{ marginTop: 16 }}
         >
           💳 המשך לתשלום
         </button>
       )}
 
-      {group.status === 'paid' && isMember && (
+      {group.hasPaid && group.status !== 'paid' && (
         <p style={{ color: 'green', marginTop: 16 }}>
-          ✅ התשלום הושלם. תודה!
+          ✅ שילמת – ממתינים לשאר המשתתפים
+        </p>
+      )}
+
+      {group.status === 'paid' && (
+        <p style={{ color: 'green', fontWeight: 'bold', marginTop: 16 }}>
+          🎉 כולם שילמו!
         </p>
       )}
     </div>

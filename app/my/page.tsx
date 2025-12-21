@@ -5,16 +5,7 @@ import { apiFetch } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
 type GroupItem = {
-  group: {
-    id: number;
-    status: 'open' | 'completed' | 'paid';
-    target: number;
-    members: any[];
-    product: {
-      name: string;
-      priceGroup: number;
-    };
-  };
+  group: any;
   hasPaid: boolean;
 };
 
@@ -48,6 +39,22 @@ export default function MyGroupsPage() {
           <h3>{group.product.name}</h3>
           <p>👥 {group.members.length} / {group.target}</p>
 
+          <h4>סטטוס תשלומים:</h4>
+          <ul>
+            {group.members.map((m: any) => {
+              const paid = group.payments.some(
+                (p: any) => p.userId === m.userId
+              );
+
+              return (
+                <li key={m.userId}>
+                  {m.user.username || m.user.email} —{' '}
+                  {paid ? '✅ שילם' : '⏳ ממתין'}
+                </li>
+              );
+            })}
+          </ul>
+
           {!hasPaid && group.status === 'completed' && (
             <button onClick={() => router.push(`/pay/${group.id}`)}>
               💳 המשך לתשלום
@@ -56,13 +63,13 @@ export default function MyGroupsPage() {
 
           {hasPaid && group.status !== 'paid' && (
             <p style={{ color: 'green' }}>
-              ✅ שילמת כבר – ממתינים לשאר המשתתפים
+              ✅ שילמת – ממתינים לשאר המשתתפים
             </p>
           )}
 
           {group.status === 'paid' && (
             <p style={{ color: 'green', fontWeight: 'bold' }}>
-              🎉 הקבוצה הושלמה – כולם שילמו
+              🎉 כולם שילמו – הקבוצה הושלמה
             </p>
           )}
         </div>

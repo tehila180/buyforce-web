@@ -4,60 +4,11 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 
-/* ---------- Types ---------- */
-
-type Member = {
-  user: {
-    id: string;
-    username: string;
-    email: string;
-  };
-};
-
-type Payment = {
-  userId: string;
-  status: string;
-};
-
-type Group = {
-  id: number;
-  status: 'open' | 'completed' | 'paid';
-  target: number;
-  members: Member[];
-  payments: Payment[];
-  hasPaid: boolean;
-  product: {
-    name: string;
-    priceRegular: number;
-    priceGroup: number;
-  };
-};
-
-/* ---------- Helpers ---------- */
-
-function getCurrentUserId() {
-  if (typeof window === 'undefined') return null;
-  const token = localStorage.getItem('token');
-  if (!token) return null;
-
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.sub as string;
-  } catch {
-    return null;
-  }
-}
-
-/* ---------- Page ---------- */
-
 export default function GroupPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-
-  const [group, setGroup] = useState<Group | null>(null);
+  const [group, setGroup] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
-  const currentUserId = getCurrentUserId();
 
   useEffect(() => {
     apiFetch(`/groups/${id}`)
@@ -65,66 +16,53 @@ export default function GroupPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <p style={{ padding: 24 }}>טוען קבוצה…</p>;
-  if (!group) return <p style={{ padding: 24 }}>קבוצה לא נמצאה</p>;
+  if (loading) return <p>טוען…</p>;
+  if (!group) return <p>קבוצה לא נמצאה</p>;
 
   const paidUserIds = new Set(
     group.payments
-      .filter(p => p.status === 'CAPTURED')
-      .map(p => p.userId),
+      ?.filter((p: any) => p.status === 'CAPTURED')
+      .map((p: any) => p.userId)
   );
 
   return (
-    <div style={{ padding: 24, maxWidth: 600, margin: '0 auto' }}>
+    <div style={{ padding: 24 }}>
       <h1>{group.product.name}</h1>
 
-      <p>
-        מחיר קבוצתי: <strong>₪{group.product.priceGroup}</strong>
-      </p>
-      <p style={{ textDecoration: 'line-through', color: '#888' }}>
-        ₪{group.product.priceRegular}
-      </p>
+      <p>👥 {group.members.length} / {group.target}</p>
 
-      <p>
-        👥 {group.members.length} / {group.target}
-      </p>
-
-      {/* 👥 רשימת משתתפים */}
-      <h3 style={{ marginTop: 20 }}>משתתפים</h3>
+      <h3>משתתפים</h3>
       <ul>
-        {group.members.map(m => {
-          const isMe = m.user.id === currentUserId;
-          const hasPaid = paidUserIds.has(m.user.id);
-
-          return (
-            <li key={m.user.id}>
-              {m.user.username || m.user.email}
-              {isMe && <strong> (אני)</strong>} —{' '}
-              {hasPaid ? '✅ שילם' : '⏳ ממתין'}
-            </li>
-          );
-        })}
+        {group.members.map((m: any) => (
+          <li key={m.user.id}>
+            {m.user.username || m.user.email}
+            {m.user.id === group.currentUserId && ' (אני)'} —{' '}
+            {paidUserIds.has(m.user.id) ? '✅ שילם' : '⏳ ממתין'}
+          </li>
+        ))}
       </ul>
 
-      {/* 💳 כפתורי פעולה */}
       {group.status === 'completed' && !group.hasPaid && (
-        <button
-          onClick={() => router.push(`/pay/${group.id}`)}
-          style={{ marginTop: 16 }}
-        >
+        <button onClick={() => router.push(`/pay/${group.id}`)}>
           💳 המשך לתשלום
         </button>
       )}
 
       {group.hasPaid && group.status !== 'paid' && (
-        <p style={{ color: 'green', marginTop: 16 }}>
+        <p style={{ color: 'green' }}>
           ✅ שילמת – ממתינים לשאר המשתתפים
         </p>
       )}
 
       {group.status === 'paid' && (
-        <p style={{ color: 'green', fontWeight: 'bold', marginTop: 16 }}>
+        <p style={{ color: 'green', fontWeight: 'bold' }}>
           🎉 כולם שילמו!
+        </p>
+      )}
+
+      {group.status === 'cancelled' && (
+        <p style={{ color: 'red', fontWeight: 'bold' }}>
+          ❌ הקבוצה בוטלה – התשלום הוחזר
         </p>
       )}
     </div>

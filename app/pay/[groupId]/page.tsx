@@ -26,37 +26,22 @@ export default function PayPage() {
             ],
           })
         }
-
         onApprove={async (data, actions) => {
           if (!actions.order) return;
 
-          try {
-            // 1️⃣ Capture מול PayPal
-            const details = await actions.order.capture();
+          const details = await actions.order.capture();
 
-            // 2️⃣ עדכון Backend
-            await apiFetch('/payments/paypal/confirm', {
-              method: 'POST',
-              body: JSON.stringify({
-                groupId: Number(groupId),
-                paypalOrderId: details.id,
-              }),
-            });
+          await apiFetch('/payments/paypal/confirm', {
+            method: 'POST',
+            body: JSON.stringify({
+              groupId: Number(groupId),
+              paypalOrderId: details.id,
+            }),
+          });
 
-            // 3️⃣ מעבר לדף קיים בלבד
-            router.push('/payment/success');
-
-          } catch (err: any) {
-            console.error('❌ Payment confirm failed:', err.message);
-            alert('התשלום בוצע אך שמירתו נכשלה');
-            router.push('/payment/fail');
-          }
+          router.push('/payment/success');
         }}
-
-        onError={(err) => {
-          console.error('PayPal error:', err);
-          router.push('/payment/fail');
-        }}
+        onError={() => router.push('/payment/fail')}
       />
     </div>
   );

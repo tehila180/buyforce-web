@@ -4,13 +4,14 @@ import { PayPalButtons } from '@paypal/react-paypal-js';
 import { useParams, useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 
-export default function PayPage() {
+export default function JoinPayPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const router = useRouter();
 
   return (
-    <div style={{ padding: 24, maxWidth: 420, margin: '0 auto' }}>
-      <h1>💳 תשלום השתתפות</h1>
+    <div style={{ padding: 24 }}>
+      <h1>💳 הצטרפות לקבוצה</h1>
+      <p>דמי השתתפות: ₪1</p>
 
       <PayPalButtons
         createOrder={(data, actions) =>
@@ -18,10 +19,7 @@ export default function PayPage() {
             intent: 'CAPTURE',
             purchase_units: [
               {
-                amount: {
-                  currency_code: 'ILS',
-                  value: '1.00',
-                },
+                amount: { currency_code: 'ILS', value: '1.00' },
               },
             ],
           })
@@ -31,7 +29,7 @@ export default function PayPage() {
 
           const details = await actions.order.capture();
 
-          await apiFetch('/payments/paypal/confirm', {
+          await apiFetch('/payments/paypal/join', {
             method: 'POST',
             body: JSON.stringify({
               groupId: Number(groupId),
@@ -39,9 +37,8 @@ export default function PayPage() {
             }),
           });
 
-          router.push('/payment/success');
+          router.push(`/groups/${groupId}`);
         }}
-        onError={() => router.push('/payment/fail')}
       />
     </div>
   );

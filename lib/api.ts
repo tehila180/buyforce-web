@@ -1,9 +1,18 @@
+<<<<<<< HEAD
 const API_BASE = process.env.NEXT_PUBLIC_API_URL!;
 
+=======
+>>>>>>> 6594014023fcef589bfe87751302fdf6b68bec06
 export async function apiFetch(
   path: string,
   options: RequestInit = {},
 ) {
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+
+  if (!API_BASE) {
+    throw new Error('NEXT_PUBLIC_API_URL is not defined');
+  }
+
   const token =
     typeof window !== 'undefined'
       ? localStorage.getItem('token')

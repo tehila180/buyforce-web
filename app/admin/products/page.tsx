@@ -1,3 +1,4 @@
+
 // app/admin/products/page.tsx
 'use client';
 
